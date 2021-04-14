@@ -74,12 +74,15 @@ cd ${work_path}
 tar cjf payload0 ${installer_content}
 additiona_payload[0]=payload0
 cat << EOF > ${final_installer_name}
-\$!/bin/bash -x
+#!/bin/bash -x
 
 work_path=\$(mktemp -d /tmp/tmp.XXXXXXXXXX)
 
 rm -rf \${work_path}
+exit 0
 EOF
+
+chmod 755 ${final_installer_name}
 
 for pid in "${!additiona_payload[@]}"; do
 	echo ">>>>> payload $(printf "%03d" ${pid}) <<<<<" >> ${final_installer_name}
