@@ -4,6 +4,9 @@ entries_to_pack=()
 declare -A additiona_payload
 post_install_exec=
 work_path=
+payload_prefix=">>>>> "
+payload_suffix=" <<<<<"
+payload_marker="payload"
 
 function usage {
 	echo "usage: $(basename $0) [-f ... ] [-s .... ] [-p file] <installer name>"
@@ -30,10 +33,9 @@ while getopts ":s:f:p:" opt; do
 			if [ ! -f "${OPTARG}" -o ! -x "${OPTARG}" ]; then
 				error ${OPTARG} must be an executable file
 			fi
-echo ${entries_to_pack[@]}
+
 			post_install_exec="${OPTARG}"
 			entries_to_pack+=( ${post_install_exec} )
-			echo ${LINENO}:${entries_to_pack[@]}
 		;;
 
 		s)
@@ -56,7 +58,7 @@ echo ${entries_to_pack[@]}
 		;;
 	esac
 done
-echo ${LINENO}:${entries_to_pack}
+
 shift $((OPTIND-1))
 if [ -z "$1" ]; then
 	error installer name is missing
@@ -76,16 +78,39 @@ additiona_payload[0]=payload0
 cat << EOF > ${final_installer_name}
 #!/bin/bash -x
 
-work_path=\$(mktemp -d /tmp/tmp.XXXXXXXXXX)
+payload_start=()
+payload_name=()
 
-rm -rf \${work_path}
+OLDIFS=\${IFS}
+IFS=\$'\n'
+
+work_path=\$(mktemp -d /tmp/tmp.XXXXXXXXXX)
+mkdir -p \${work_path}/payloads
+for ent in \$(egrep -an "^${payload_prefix}${payload_marker} [0-9]{3}${payload_suffix}\$" \$0 | sed "s/:${payload_prefix}/ /g;s/${payload_suffix}\$//g"); do
+	payload_start+=( \$(echo \${ent} | cut -f 1 -d ' ') )
+	payload_name+=( \$(echo \${ent} | cut -f 3 -d ' ') )
+done
+
+payload_start+=( \$(wc -l \$0 | cut -f 1 -d ' ') )
+
+for i in "\${!payload_name[@]}"; do
+	next_idx=\$((\${i}+1))
+	start=\$((\${payload_start[\${i}]}+1))
+	end=\$((\${payload_start[\${next_idx}]}-1))
+	dst=\${work_path}/payloads/\${payload_name[\${i}]}
+	sed -n "\${start},\${end}p;\${end}q" \$0 | head -c -1 > \${dst}
+done
+
+ls -ltr \${work_path}/*
+#rm -rf \${work_path}
 exit 0
 EOF
 
+sed -i '$ s/.$//' ${final_installer_name}
 chmod 755 ${final_installer_name}
 
 for pid in "${!additiona_payload[@]}"; do
-	echo ">>>>> payload $(printf "%03d" ${pid}) <<<<<" >> ${final_installer_name}
+	echo -e "\n${payload_prefix}${payload_marker} $(printf "%03d" ${pid})${payload_suffix}" >> ${final_installer_name}
 	cat ${additiona_payload[$pid]} >> ${final_installer_name} || error failed to append payload
 done
 
