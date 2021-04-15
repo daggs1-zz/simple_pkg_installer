@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 entries_to_pack=()
 declare -A additiona_payload
@@ -73,10 +73,17 @@ for entry in ${entries_to_pack[@]}; do
 done
 
 cd ${work_path}
-tar cjf payload0 ${installer_content}
+
+if [ ! -z "${post_install_exec}" ]; then
+	ln -s $(basename ${post_install_exec}) post_install
+	installer_content+=( post_install )
+fi
+
+tar cjf payload0 ${installer_content[@]}
+cp payload0 ${OLDPWD}
 additiona_payload[0]=payload0
 cat << EOF > ${final_installer_name}
-#!/bin/bash -x
+#!/bin/bash
 
 payload_start=()
 payload_name=()
@@ -91,7 +98,7 @@ for ent in \$(egrep -an "^${payload_prefix}${payload_marker} [0-9]{3}${payload_s
 	payload_name+=( \$(echo \${ent} | cut -f 3 -d ' ') )
 done
 
-payload_start+=( \$(wc -l \$0 | cut -f 1 -d ' ') )
+payload_start+=( \$((\$(wc -l \$0 | cut -f 1 -d ' ')+1)) )
 
 for i in "\${!payload_name[@]}"; do
 	next_idx=\$((\${i}+1))
@@ -101,18 +108,25 @@ for i in "\${!payload_name[@]}"; do
 	sed -n "\${start},\${end}p;\${end}q" \$0 | head -c -1 > \${dst}
 done
 
-ls -ltr \${work_path}/*
-#rm -rf \${work_path}
+tar xjf \${work_path}/payloads/000 -C \${work_path}
+cd \${work_path}
+if [ -e post_install ]; then
+	./post_install
+fi
+cd - > /dev/null
+
+rm -rf \${work_path}
 exit 0
 EOF
 
-sed -i '$ s/.$//' ${final_installer_name}
-chmod 755 ${final_installer_name}
-
 for pid in "${!additiona_payload[@]}"; do
 	echo -e "\n${payload_prefix}${payload_marker} $(printf "%03d" ${pid})${payload_suffix}" >> ${final_installer_name}
-	cat ${additiona_payload[$pid]} >> ${final_installer_name} || error failed to append payload
+	cat ${final_installer_name} ${additiona_payload[$pid]} >> ${final_installer_name}.tmp || error failed to append payload
+	mv ${final_installer_name}.tmp ${final_installer_name}
 done
+
+echo >> ${final_installer_name}
+chmod 755 ${final_installer_name}
 
 cd - > /dev/null
 
