@@ -24,7 +24,7 @@ work_path=
 payload_prefix=">>>>> "
 payload_suffix=" <<<<<"
 payload_marker="payload"
-utils_list="rm mktemp cp ln tar cat mv chmod echo cut basename grep printf"
+utils_list="rm mktemp cp ln tar cat mv chmod echo cut basename grep printf bzip2"
 
 function usage {
 	echo "usage: $(basename $0) [-f ... ] [-s .... ] [-p file] <installer name>"
@@ -109,7 +109,7 @@ if [ ! -z "${post_install_exec}" ]; then
 	installer_content+=( post_install )
 fi
 
-tar cjf payload0 ${installer_content[@]}
+tar -c ${installer_content[@]} | bzip2 > payload0
 cp payload0 ${OLDPWD}
 additiona_payload[0]=payload0
 cat << EOF > ${final_installer_name}
@@ -117,7 +117,7 @@ cat << EOF > ${final_installer_name}
 
 payload_start=()
 payload_name=()
-utils_list="rm mktemp mkdir egrep cut sed wc head tar echo"
+utils_list="rm mktemp mkdir egrep cut sed wc head tar echo bzip2"
 
 which 2>&1 | egrep -q Usage
 if [ \$? -ne 0 ]; then
@@ -153,7 +153,7 @@ for i in "\${!payload_name[@]}"; do
 	sed -n "\${start},\${end}p;\${end}q" \$0 | head -c -1 > \${dst}
 done
 
-tar xjf \${work_path}/payloads/000 -C \${work_path}
+bzip2 -dc \${work_path}/payloads/000 | tar -x -C \${work_path}
 cd \${work_path}
 if [ -e post_install ]; then
 	./post_install
