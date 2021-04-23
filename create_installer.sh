@@ -24,7 +24,7 @@ work_path=
 payload_prefix=">>>>> "
 payload_suffix=" <<<<<"
 payload_marker="payload"
-utils_list="rm mktemp cp ln tar cat mv chmod echo cut basename"
+utils_list="rm mktemp cp ln tar cat mv chmod echo cut basename grep printf"
 
 function usage {
 	echo "usage: $(basename $0) [-f ... ] [-s .... ] [-p file] <installer name>"
@@ -48,14 +48,12 @@ function error {
 which 2>&1 | grep -q Usage
 if [ $? -ne 0 ]; then
 	error which is needed but not found!
-	exit 1
 fi
 
 for util in $(echo ${utils_list}); do
 	which ${util} > /dev/null
 	if [ $? -ne 0 ]; then
 		error utils ${util} is needed but not found!
-		exit 1
 	fi
 done
 
@@ -119,6 +117,21 @@ cat << EOF > ${final_installer_name}
 
 payload_start=()
 payload_name=()
+utils_list="rm mktemp mkdir egrep cut sed wc head tar echo"
+
+which 2>&1 | egrep -q Usage
+if [ \$? -ne 0 ]; then
+	echo "which is needed but not found!"
+	exit 1
+fi
+
+for util in \$(echo \${utils_list}); do
+	which \${util} > /dev/null
+	if [ \$? -ne 0 ]; then
+		echo "utils \${util} is needed but not found!"
+		exit 1
+	fi
+done
 
 OLDIFS=\${IFS}
 IFS=\$'\n'
