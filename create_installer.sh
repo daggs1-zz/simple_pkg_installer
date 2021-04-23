@@ -24,6 +24,7 @@ work_path=
 payload_prefix=">>>>> "
 payload_suffix=" <<<<<"
 payload_marker="payload"
+utils_list="rm mktemp cp ln tar cat mv chmod echo cut basename"
 
 function usage {
 	echo "usage: $(basename $0) [-f ... ] [-s .... ] [-p file] <installer name>"
@@ -43,6 +44,14 @@ function error {
 
 	exit 1
 }
+
+for util in $(echo ${utils_list}); do
+	which ${util} > /dev/null
+	if [ $? -ne 0 ]; then
+		error utils ${util} is needed but not Foundation
+		exit 1
+	fi
+done
 
 while getopts ":s:f:p:" opt; do
 	case ${opt} in
