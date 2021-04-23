@@ -45,10 +45,16 @@ function error {
 	exit 1
 }
 
+which 2>&1 | grep -q Usage
+if [ $? -ne 0 ]; then
+	error which is needed but not found!
+	exit 1
+fi
+
 for util in $(echo ${utils_list}); do
 	which ${util} > /dev/null
 	if [ $? -ne 0 ]; then
-		error utils ${util} is needed but not Foundation
+		error utils ${util} is needed but not found!
 		exit 1
 	fi
 done
