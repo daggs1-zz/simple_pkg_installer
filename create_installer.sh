@@ -166,7 +166,7 @@ EOF
 
 for pid in "${!additiona_payload[@]}"; do
 	echo -e "\n${payload_prefix}${payload_marker} $(printf "%03d" ${pid})${payload_suffix}" >> ${final_installer_name}
-	cat ${final_installer_name} ${additiona_payload[$pid]} >> ${final_installer_name}.tmp || error failed to append payload
+	cat ${final_installer_name} ${additiona_payload[${pid}]} >> ${final_installer_name}.tmp || error failed to append payload
 	mv ${final_installer_name}.tmp ${final_installer_name}
 done
 
